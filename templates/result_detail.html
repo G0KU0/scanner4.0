@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Szkennelés Eredményei{% endblock %}
+{% block content %}
+<div class="detail-page">
+    <h1 class="page-title">
+        <i class="fas fa-poll"></i>
+        Szkennelés #{{ job.id[:8] }}...
+        <span class="status-badge status-{{ job.status }}">
+            {{ job.status }}
+        </span>
+    </h1>
+
+    <div class="stats-grid" style="margin-bottom:30px">
+        <div class="stat-card stat-valid">
+            <div class="stat-info">
+                <span class="stat-value">
+                    {{ job.valid or 0 }}
+                </span>
+                <span class="stat-label">Érvényes</span>
+            </div>
+        </div>
+        <div class="stat-card stat-inbox">
+            <div class="stat-info">
+                <span class="stat-value">
+                    {{ job.inbox or 0 }}
+                </span>
+                <span class="stat-label">Beérkező</span>
+            </div>
+        </div>
+        <div class="stat-card stat-2fa">
+            <div class="stat-info">
+                <span class="stat-value">
+                    {{ job.twofa or 0 }}
+                </span>
+                <span class="stat-label">2FA</span>
+            </div>
+        </div>
+        <div class="stat-card stat-bad">
+            <div class="stat-info">
+                <span class="stat-value">
+                    {{ job.bad or 0 }}
+                </span>
+                <span class="stat-label">Hibás</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="results-grid-layout">
+        <!-- VALID OSZLOP -->
+        <div class="result-col-container">
+            <div class="result-col-header header-valid">
+                <span><i class="fas fa-check"></i> Érvényes</span>
+                <span class="badge badge-blue" style="font-size:0.9rem;">{{ job.valid or 0 }}</span>
+            </div>
+            <div class="result-col-content scrollbar">
+                <div class="results-list">
+                {% for r in results if r.status == 'valid' %}
+                    <div class="result-row result-valid" onclick="copyToClipboard('{{ r.email }}:{{ r.password }}')">
+                        <div class="result-main" style="align-items:flex-start;">
+                            <span class="result-icon">✅</span>
+                            <div style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                                <span class="result-email">{{ r.email }}</span>
+                                <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                                    <span class="result-country">{{ r.country or '' }}</span>
+                                    <span class="text-muted"><code>{{ r.password }}</code></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-muted" style="padding:10px; text-align:center;">Nincs érvényes fiók</div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- INBOX OSZLOP -->
+        <div class="result-col-container">
+            <div class="result-col-header header-inbox">
+                <span><i class="fas fa-inbox"></i> Beérkező</span>
+                <span class="badge badge-green" style="font-size:0.9rem;">{{ job.inbox or 0 }}</span>
+            </div>
+            <div class="result-col-content scrollbar">
+                <div class="results-list">
+                {% for r in results if r.status == 'inbox' %}
+                    <div class="result-row result-inbox" onclick="copyToClipboard('{{ r.email }}:{{ r.password }}')">
+                        <div class="result-main" style="align-items:flex-start;">
+                            <span class="result-icon">📬</span>
+                            <div style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                                <span class="result-email">{{ r.email }}</span>
+                                <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                                    <span class="result-country">{{ r.country or '' }}</span>
+                                    <span class="text-muted"><code>{{ r.password }}</code></span>
+                                </div>
+                            </div>
+                        </div>
+                        {% if r.keyword_hits %}
+                        <div class="result-keywords" style="margin-top:8px;">
+                            {% for kw, cnt in r.keyword_hits.items() %}
+                                {% set dt = r.keyword_dates.get(kw, '') if r.keyword_dates else '' %}
+                                <span class="kw-tag">{{ kw }}: <strong>{{ cnt }}</strong>
+                                    {% if dt %}<small>({{ dt }})</small>{% endif %}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="text-muted" style="padding:10px; text-align:center;">Nincs beérkező kategóriájú fiók</div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2FA OSZLOP -->
+        <div class="result-col-container">
+            <div class="result-col-header header-2fa">
+                <span><i class="fas fa-shield-alt"></i> 2FA</span>
+                <span class="badge badge-orange" style="font-size:0.9rem;">{{ job.twofa or 0 }}</span>
+            </div>
+            <div class="result-col-content scrollbar">
+                <div class="results-list">
+                {% for r in results if r.status == '2fa' %}
+                    <div class="result-row result-2fa" onclick="copyToClipboard('{{ r.email }}:{{ r.password }}')">
+                        <div class="result-main" style="align-items:flex-start;">
+                            <span class="result-icon">🔒</span>
+                            <div style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                                <span class="result-email">{{ r.email }}</span>
+                                <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                                    <span class="result-country">{{ r.country or '' }}</span>
+                                    <span class="text-muted"><code>{{ r.password }}</code></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-muted" style="padding:10px; text-align:center;">Nincs 2FA fiók</div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

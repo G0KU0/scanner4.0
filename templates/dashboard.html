@@ -1,0 +1,720 @@
+{% extends "base.html" %}
+{% block title %}Vezérlőpult - UPDH{% endblock %}
+{% block content %}
+<div class="dashboard">
+    <!-- STATS -->
+    <div class="stats-grid">
+        <div class="stat-card stat-valid">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="stat-valid">0</span>
+                <span class="stat-label">Érvényes</span>
+            </div>
+        </div>
+        <div class="stat-card stat-inbox">
+            <div class="stat-icon">
+                <i class="fas fa-inbox"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="stat-inbox">0</span>
+                <span class="stat-label">Beérkező</span>
+            </div>
+        </div>
+        <div class="stat-card stat-2fa">
+            <div class="stat-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="stat-twofa">0</span>
+                <span class="stat-label">2FA</span>
+            </div>
+        </div>
+        <div class="stat-card stat-bad">
+            <div class="stat-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="stat-bad">0</span>
+                <span class="stat-label">Hibás</span>
+            </div>
+        </div>
+        <div class="stat-card stat-checked">
+            <div class="stat-icon">
+                <i class="fas fa-tasks"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value">
+                    <span id="stat-checked">0</span>/<span id="stat-total">0</span>
+                </span>
+                <span class="stat-label">Ellenőrizve</span>
+            </div>
+        </div>
+        <div class="stat-card stat-cpm">
+            <div class="stat-icon">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="stat-cpm">0</span>
+                <span class="stat-label">CPM</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        <span class="progress-text" id="progress-text">0%</span>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="control-panel">
+        <form id="scan-form" enctype="multipart/form-data">
+            <div class="control-grid">
+                <div class="control-group">
+                    <label>
+                        <i class="fas fa-file-upload"></i>
+                        Fióklista (Combo)
+                    </label>
+                    <div class="file-input-wrapper">
+                        <input type="file" name="combo_file" id="combo-file" accept=".txt,.csv" required>
+                        <label for="combo-file" class="file-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span id="combo-filename">
+                                Fájl kiválasztása...
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <i class="fas fa-file-upload"></i>
+                        Proxy (opcionális)
+                    </label>
+                    <div class="file-input-wrapper">
+                        <input type="file" name="proxy_file" id="proxy-file" accept=".txt">
+                        <label for="proxy-file" class="file-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span id="proxy-filename">
+                                Fájl kiválasztása...
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="control-group control-group-wide"
+                    style="flex-direction:row; align-items:center; justify-content:space-between; padding-bottom:0;">
+                    <label style="margin-bottom:0;">
+                        <i class="fas fa-search"></i>
+                        Kulcsszavak (soronként egy)
+                    </label>
+                </div>
+                <div class="control-group control-group-wide" style="padding-top:0;">
+                    <textarea name="keywords" id="keywords" rows="3" placeholder="Steam&#10;Netflix&#10;PayPal">Steam
+Netflix
+PayPal</textarea>
+                </div>
+                <div class="control-group control-group-wide toggle-group"
+                    style="flex-direction:row; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:15px; margin-top:5px;">
+                    <label style="margin-bottom:0;">
+                        <i class="fas fa-cloud-upload-alt"></i> Szeretnéd letölteni külön-külön miután végzett?
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="auto_upload" id="auto-upload" value="true">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="control-buttons">
+                <button type="submit" class="btn btn-success" id="btn-start">
+                    <i class="fas fa-play"></i> Indítás
+                </button>
+                <button type="button" class="btn btn-warning" id="btn-pause" disabled>
+                    <i class="fas fa-pause"></i> Szünet
+                </button>
+                <button type="button" class="btn btn-danger" id="btn-stop" disabled>
+                    <i class="fas fa-stop"></i> Leállítás
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- STATUS -->
+    <div class="status-bar" id="status-bar">
+        <i class="fas fa-circle"></i>
+        <span id="status-text">Készenlét - Indításra vár</span>
+    </div>
+
+    <!-- MULTI-COLUMN RESULTS -->
+    <div class="results-section">
+        <div class="results-grid-layout">
+            <div class="result-col-container">
+                <div class="result-col-header header-valid">
+                    <span><i class="fas fa-check"></i> Érvényes</span>
+                    <span class="badge badge-blue" id="badge-valid">0</span>
+                </div>
+                <div class="result-col-content scrollbar" id="results-valid"></div>
+            </div>
+
+            <div class="result-col-container">
+                <div class="result-col-header header-inbox">
+                    <span><i class="fas fa-inbox"></i> Beérkező</span>
+                    <span class="badge badge-green" id="badge-inbox">0</span>
+                </div>
+                <div class="result-col-content scrollbar" id="results-inbox"></div>
+            </div>
+
+            <div class="result-col-container">
+                <div class="result-col-header header-2fa">
+                    <span><i class="fas fa-shield-alt"></i> 2FA</span>
+                    <span class="badge badge-orange" id="badge-2fa">0</span>
+                </div>
+                <div class="result-col-content scrollbar" id="results-2fa"></div>
+            </div>
+        </div>
+
+        <!-- Hidden containers for logic compatibility, capturing bad/all accounts if needed -->
+        <div style="display:none;" id="results-all"></div>
+        <div style="display:none;" id="results-bad"></div>
+        <div style="display:none;" id="keywords-grid"></div>
+        <span id="badge-all" style="display:none;">0</span>
+        <span id="badge-bad" style="display:none;">0</span>
+        <span id="badge-keywords" style="display:none;">0</span>
+    </div>
+
+    <!-- UPLOAD MODAL -->
+    <div class="modal" id="upload-modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Eredmények feltöltése
+                </h2>
+                <button class="modal-close" onclick="document.getElementById('upload-modal').style.display='none'">
+                    &times;
+                </button>
+            </div>
+            <div class="modal-body" id="upload-links"></div>
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL -->
+    <div class="modal" id="detail-modal" style="display:none">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-envelope-open"></i>
+                    <span id="detail-title">Részletek</span>
+                </h2>
+                <button class="modal-close" onclick="document.getElementById('detail-modal').style.display='none'">
+                    &times;
+                </button>
+            </div>
+            <div class="modal-body" id="detail-body"></div>
+        </div>
+    </div>
+
+    <!-- CONFIRM MODAL (mint az admin panelen) -->
+    <div id="confirm-modal" class="custom-modal-overlay" style="display:none;">
+        <div class="custom-modal">
+            <h3><i class="fas fa-exclamation-triangle" style="color:var(--yellow, #eab308)"></i> Megerősítés</h3>
+            <p id="confirm-modal-text">Biztosan leállítod a szkennelést?</p>
+            <div class="custom-modal-actions">
+                <button class="btn btn-secondary" onclick="closeStopModal()">Mégsem</button>
+                <button class="btn btn-danger" id="confirm-modal-yes" onclick="doStopScan()">Igen, leállítom</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const socket = io();
+    socket.on('connect', () => socket.emit('join', {}));
+
+    const counters = { all: 0, inbox: 0, valid: 0, '2fa': 0, bad: 0 };
+    const keywordData = {};
+
+    document.getElementById('combo-file')
+        .addEventListener('change', function () {
+            document.getElementById('combo-filename')
+                .textContent = this.files[0]?.name || 'Fájl kiválasztása...';
+        });
+    document.getElementById('proxy-file')
+        .addEventListener('change', function () {
+            document.getElementById('proxy-filename')
+                .textContent = this.files[0]?.name || 'Fájl kiválasztása...';
+        });
+
+
+
+    // START & UI RESET
+    document.getElementById('scan-form')
+        .addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Töröljük a régi eredményeket és nullázzuk a változókat
+            counters.all = 0; counters.inbox = 0; counters.valid = 0;
+            counters['2fa'] = 0; counters.bad = 0;
+            for (var key in keywordData) { delete keywordData[key]; }
+
+            const resultsContainers = ['results-all', 'results-inbox', 'results-valid', 'results-2fa', 'results-bad', 'keywords-grid'];
+            resultsContainers.forEach(id => document.getElementById(id).innerHTML = '');
+
+            const statElements = ['stat-valid', 'stat-inbox', 'stat-twofa', 'stat-bad', 'stat-checked', 'stat-total', 'stat-cpm', 'badge-all', 'badge-inbox', 'badge-valid', 'badge-2fa', 'badge-bad', 'badge-keywords'];
+            statElements.forEach(id => document.getElementById(id).textContent = '0');
+
+            document.getElementById('progress-bar').style.width = '0%';
+            document.getElementById('progress-text').textContent = '0%';
+            window.uploadModalShown = false;
+
+            const fd = new FormData(e.target);
+            try {
+                const r = await fetch('/api/start-scan',
+                    { method: 'POST', body: fd });
+                const d = await r.json();
+                if (d.error) { alert(d.error); return; }
+                document.getElementById('btn-start').disabled = true;
+                document.getElementById('btn-pause').disabled = false;
+                document.getElementById('btn-stop').disabled = false;
+                document.getElementById('status-bar').className =
+                    'status-bar status-running';
+                document.getElementById('status-text')
+                    .textContent = 'Futás folyamatban...';
+            } catch (err) { alert('Hiba: ' + err.message); }
+        });
+
+    // PAUSE
+    document.getElementById('btn-pause')
+        .addEventListener('click', async () => {
+            const r = await fetch('/api/pause-scan', { method: 'POST' });
+            const d = await r.json();
+            const btn = document.getElementById('btn-pause');
+            if (d.status === 'paused') {
+                btn.innerHTML = '<i class="fas fa-play"></i> Folytatás';
+                document.getElementById('status-bar').className =
+                    'status-bar status-paused';
+                document.getElementById('status-text')
+                    .textContent = 'Szüneteltetve';
+            } else {
+                btn.innerHTML = '<i class="fas fa-pause"></i> Szünet';
+                document.getElementById('status-bar').className =
+                    'status-bar status-running';
+                document.getElementById('status-text')
+                    .textContent = 'Futás folyamatban...';
+            }
+        });
+
+    function showUploadsModal(urls) {
+        if (!urls || Object.keys(urls).length === 0) return;
+        let html = '<div class="upload-links">';
+        const labels = {
+            'valid': 'Érvényes Fiókok Mentése',
+            'inbox': 'Beérkező Levelek M.',
+            '2fa': '2FA Fiókok Mentése'
+        };
+        for (const [key, url] of Object.entries(urls)) {
+            const label = labels[key] || key;
+            html += `<div class="upload-link-item" style="margin-bottom:10px;">
+            <span class="upload-label" style="display:inline-block; width:150px; font-weight:bold;">${label}:</span>
+            <a href="${url}" target="_blank"
+               class="btn btn-sm btn-primary">
+                <i class="fas fa-external-link-alt"></i>
+                ${url}
+            </a>
+        </div>`;
+        }
+        html += '</div>';
+        document.getElementById('upload-links').innerHTML = html;
+        document.getElementById('upload-modal').style.display = 'flex';
+    }
+
+    // STOP — custom modal (mint admin felfüggesztés/törlés)
+    function closeStopModal() {
+        document.getElementById('confirm-modal').style.display = 'none';
+    }
+    async function doStopScan() {
+        closeStopModal();
+        document.getElementById('status-text').textContent = 'Leállítás...';
+        try {
+            const r = await fetch('/api/stop-scan', { method: 'POST' });
+            const d = await r.json();
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-pause').disabled = true;
+            document.getElementById('btn-stop').disabled = true;
+            document.getElementById('status-bar').className = 'status-bar status-stopped';
+            document.getElementById('status-text').textContent = 'Leállítva';
+
+            if (d.upload_urls && Object.keys(d.upload_urls).length > 0) {
+                showUploadsModal(d.upload_urls);
+            }
+        } catch (err) {
+            console.error('Stop error:', err);
+        }
+    }
+    document.getElementById('btn-stop')
+        .addEventListener('click', () => {
+            document.getElementById('confirm-modal').style.display = 'flex';
+        });
+
+    const flags = {
+        'US': '🇺🇸', 'GB': '🇬🇧', 'CA': '🇨🇦', 'AU': '🇦🇺', 'DE': '🇩🇪',
+        'FR': '🇫🇷', 'IT': '🇮🇹', 'ES': '🇪🇸', 'BR': '🇧🇷', 'IN': '🇮🇳',
+        'JP': '🇯🇵', 'KR': '🇰🇷', 'CN': '🇨🇳', 'RU': '🇷🇺', 'MX': '🇲🇽',
+        'TR': '🇹🇷', 'NL': '🇳🇱', 'PL': '🇵🇱', 'SE': '🇸🇪', 'NO': '🇳🇴',
+        'DK': '🇩🇰', 'FI': '🇫🇮', 'CZ': '🇨🇿', 'GR': '🇬🇷', 'PT': '🇵🇹',
+        'IE': '🇮🇪', 'CH': '🇨🇭', 'AT': '🇦🇹', 'BE': '🇧🇪', 'NZ': '🇳🇿',
+        'SG': '🇸🇬', 'MY': '🇲🇾', 'TH': '🇹🇭', 'PH': '🇵🇭', 'SA': '🇸🇦',
+        'AE': '🇦🇪'
+    };
+    function getFlag(c) {
+        return flags[(c || '').toUpperCase()] || '🏴';
+    }
+
+    function showDetail(email, pw, status, country, kwH, kwD) {
+        document.getElementById('detail-title').textContent = email;
+        let html = `
+    <div class="detail-grid">
+        <div class="detail-item">
+            <label>Email</label><span>${email}</span>
+        </div>
+        <div class="detail-item">
+            <label>Jelszó</label><span>${pw}</span>
+        </div>
+        <div class="detail-item">
+            <label>Állapot</label>
+            <span class="status-badge status-${status}">
+                ${status.toUpperCase()}
+            </span>
+        </div>
+        <div class="detail-item">
+            <label>Ország</label>
+            <span>${getFlag(country)} ${country || 'Ismeretlen'}</span>
+        </div>
+    </div>`;
+        if (kwH && Object.keys(kwH).length > 0) {
+            html += `<h3 style="margin-top:20px">
+            <i class="fas fa-key"></i> Kulcsszó találatok
+        </h3><div class="detail-keywords">`;
+            for (const [kw, count] of Object.entries(kwH)) {
+                const date = (kwD && kwD[kw]) ? kwD[kw] : 'N/A';
+                html += `<div class="detail-kw-item">
+                <span class="kw-name">${kw}</span>
+                <span class="kw-count">${count} levél</span>
+                <span class="kw-date">
+                    <i class="fas fa-clock"></i> Utolsó: ${date}
+                </span>
+            </div>`;
+            }
+            html += '</div>';
+        }
+        document.getElementById('detail-body').innerHTML = html;
+        document.getElementById('detail-modal')
+            .style.display = 'flex';
+    }
+
+    function createRow(data) {
+        const div = document.createElement('div');
+        div.className = `result-row result-${data.status}`;
+        // Dupla kattintás hozza fel a részleteket
+        div.ondblclick = () => showDetail(
+            data.email, data.password, data.status,
+            data.country, data.keyword_hits, data.keyword_dates
+        );
+        // Szimpla kattintás másol
+        div.onclick = () => copyToClipboard(`${data.email}:${data.password}`);
+
+        let kwHtml = '';
+        if (data.keyword_hits &&
+            Object.keys(data.keyword_hits).length > 0) {
+            kwHtml = '<div class="result-keywords">';
+            for (const [kw, cnt] of
+                Object.entries(data.keyword_hits)) {
+                const dt = (data.keyword_dates &&
+                    data.keyword_dates[kw])
+                    ? data.keyword_dates[kw] : '';
+                kwHtml += `<span class="kw-tag">${kw}:
+                <strong>${cnt}</strong>
+                ${dt ? ' <small>(' + dt + ')</small>' : ''}
+            </span>`;
+            }
+            kwHtml += '</div>';
+        }
+        const flag = data.country ? getFlag(data.country) : '';
+        const icon = data.status === 'inbox' ? '📬' :
+            data.status === 'valid' ? '✅' :
+                data.status === '2fa' ? '🔒' : '❌';
+        div.innerHTML = `
+    <div class="result-main">
+        <span class="result-icon">${icon}</span>
+        <span class="result-email">${data.email}</span>
+        <span class="result-country">
+            ${flag} ${data.country || ''}
+        </span>
+        <span class="result-status status-${data.status}">
+            ${data.status.toUpperCase()}
+        </span>
+    </div>
+    ${kwHtml}`;
+        return div;
+    }
+
+    socket.on('scan_result', (data) => {
+        counters.all++;
+        document.getElementById('results-all')
+            .prepend(createRow(data));
+
+        if (data.status === 'inbox') {
+            counters.inbox++;
+            document.getElementById('results-inbox')
+                .prepend(createRow(data));
+            if (data.keyword_hits) {
+                for (const [kw] of
+                    Object.entries(data.keyword_hits)) {
+                    if (!keywordData[kw]) keywordData[kw] = [];
+                    keywordData[kw].push(data);
+                }
+                rebuildKeywords();
+            }
+        } else if (data.status === 'valid') {
+            counters.valid++;
+            document.getElementById('results-valid')
+                .prepend(createRow(data));
+        } else if (data.status === '2fa') {
+            counters['2fa']++;
+            document.getElementById('results-2fa')
+                .prepend(createRow(data));
+        } else {
+            counters.bad++;
+            document.getElementById('results-bad')
+                .prepend(createRow(data));
+        }
+
+        document.getElementById('badge-all')
+            .textContent = counters.all;
+        document.getElementById('badge-inbox')
+            .textContent = counters.inbox;
+        document.getElementById('badge-valid')
+            .textContent = counters.valid;
+        document.getElementById('badge-2fa')
+            .textContent = counters['2fa'];
+        document.getElementById('badge-bad')
+            .textContent = counters.bad;
+    });
+
+    socket.on('scan_stats', (data) => {
+        document.getElementById('stat-valid')
+            .textContent = data.valid || 0;
+        document.getElementById('stat-inbox')
+            .textContent = data.inbox || 0;
+        document.getElementById('stat-twofa')
+            .textContent = data.twofa || 0;
+        document.getElementById('stat-bad')
+            .textContent = data.bad || 0;
+        document.getElementById('stat-checked')
+            .textContent = data.checked || 0;
+        document.getElementById('stat-total')
+            .textContent = data.total || 0;
+        document.getElementById('stat-cpm')
+            .textContent = data.cpm || 0;
+
+        const pct = data.total > 0
+            ? Math.round((data.checked / data.total) * 100) : 0;
+        document.getElementById('progress-bar')
+            .style.width = pct + '%';
+        document.getElementById('progress-text')
+            .textContent = pct + '%';
+
+        if (data.status === 'completed') {
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-pause').disabled = true;
+            document.getElementById('btn-stop').disabled = true;
+            document.getElementById('status-bar').className =
+                'status-bar status-completed';
+            document.getElementById('status-text')
+                .textContent = 'Befejezve!';
+        }
+    });
+
+    function rebuildKeywords() {
+        const grid = document.getElementById('keywords-grid');
+        grid.innerHTML = '';
+        const n = Object.keys(keywordData).length;
+        document.getElementById('badge-keywords').textContent = n;
+
+        for (const [kw, items] of Object.entries(keywordData)) {
+            const card = document.createElement('div');
+            card.className = 'keyword-card';
+            card.innerHTML = `
+        <div class="keyword-header">
+            <span class="keyword-name">
+                <i class="fas fa-tag"></i> ${kw}
+            </span>
+            <span class="keyword-count">
+                ${items.length} fiók
+            </span>
+        </div>
+        <div class="keyword-items" style="display:none"></div>`;
+            card.querySelector('.keyword-header')
+                .addEventListener('click', () => {
+                    const d = card.querySelector('.keyword-items');
+                    d.style.display =
+                        d.style.display === 'none' ? 'block' : 'none';
+                });
+            const itemsDiv = card.querySelector('.keyword-items');
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'keyword-detail-row';
+                const cnt = item.keyword_hits[kw] || 0;
+                const dt = (item.keyword_dates &&
+                    item.keyword_dates[kw]) || 'N/A';
+                row.innerHTML = `
+            <span class="kd-email">${item.email}</span>
+            <span class="kd-country">
+                ${getFlag(item.country)} ${item.country || ''}
+            </span>
+            <span class="kd-count">${cnt} levél</span>
+            <span class="kd-date">
+                <i class="fas fa-clock"></i> ${dt}
+            </span>`;
+                row.onclick = (e) => {
+                    e.stopPropagation();
+                    showDetail(item.email, item.password,
+                        item.status, item.country,
+                        item.keyword_hits, item.keyword_dates);
+                };
+                itemsDiv.appendChild(row);
+            });
+            grid.appendChild(card);
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const r = await fetch('/api/scan-status');
+            const d = await r.json();
+
+            if (d.status && d.status !== 'idle') {
+                // Frissítésből visszatérve frissítjük a statisztikát
+                document.getElementById('stat-valid').textContent = d.valid || 0;
+                document.getElementById('stat-inbox').textContent = d.inbox || 0;
+                document.getElementById('stat-twofa').textContent = d.twofa || 0;
+                document.getElementById('stat-bad').textContent = d.bad || 0;
+                document.getElementById('stat-checked').textContent = d.checked || 0;
+                document.getElementById('stat-total').textContent = d.total || 0;
+                document.getElementById('stat-cpm').textContent = d.cpm || 0;
+
+                const pct = d.total > 0 ? Math.round((d.checked / d.total) * 100) : 0;
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('progress-text').textContent = pct + '%';
+
+                // Gombok beállítása státusz alapján
+                if (d.status === 'running') {
+                    document.getElementById('btn-start').disabled = true;
+                    document.getElementById('btn-pause').disabled = false;
+                    document.getElementById('btn-stop').disabled = false;
+                    document.getElementById('status-bar').className = 'status-bar status-running';
+                    document.getElementById('status-text').textContent = 'Fut (Szkennelés)';
+                } else if (d.status === 'paused') {
+                    document.getElementById('btn-start').disabled = true;
+                    document.getElementById('btn-pause').disabled = false;
+                    document.getElementById('btn-stop').disabled = false;
+                    document.getElementById('btn-pause').innerHTML = '<i class="fas fa-play"></i> Folytatás';
+                    document.getElementById('status-bar').className = 'status-bar status-paused';
+                    document.getElementById('status-text').textContent = 'Szüneteltetve';
+                } else if (d.status === 'completed') {
+                    document.getElementById('btn-start').disabled = false;
+                    document.getElementById('btn-pause').disabled = true;
+                    document.getElementById('btn-stop').disabled = true;
+                    document.getElementById('status-bar').className = 'status-bar status-completed';
+                    document.getElementById('status-text').textContent = 'Befejezve!';
+                }
+
+                // Visszatöltjük a jelenlegi job meglévő eddigi eredményeit
+                if (d.job_id) {
+                    const jr = await fetch('/api/job-results/' + d.job_id);
+                    const jData = await jr.json();
+                    if (jData && jData.results) {
+                        // Az adatbázis legújabb elöl van, ezért elég sorban append-elni, 
+                        // vagy mivel reverse kell, iterálhatjuk és prepend-eljük a createRow-kkal
+                        jData.results.reverse().forEach(res => {
+                            counters.all++;
+                            document.getElementById('results-all').prepend(createRow(res));
+                            if (res.status === 'inbox') {
+                                counters.inbox++;
+                                document.getElementById('results-inbox').prepend(createRow(res));
+                                if (res.keyword_hits) {
+                                    Object.entries(res.keyword_hits).forEach(([kw]) => {
+                                        if (!keywordData[kw]) keywordData[kw] = [];
+                                        keywordData[kw].push(res);
+                                    });
+                                }
+                            } else if (res.status === 'valid') {
+                                counters.valid++;
+                                document.getElementById('results-valid').prepend(createRow(res));
+                            } else if (res.status === '2fa') {
+                                counters['2fa']++;
+                                document.getElementById('results-2fa').prepend(createRow(res));
+                            } else {
+                                counters.bad++;
+                                document.getElementById('results-bad').prepend(createRow(res));
+                            }
+                        });
+                        rebuildKeywords();
+
+                        document.getElementById('badge-all').textContent = counters.all;
+                        document.getElementById('badge-inbox').textContent = counters.inbox;
+                        document.getElementById('badge-valid').textContent = counters.valid;
+                        document.getElementById('badge-2fa').textContent = counters['2fa'];
+                        document.getElementById('badge-bad').textContent = counters.bad;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Hiba státusz betöltésekor:", e);
+        }
+    });
+
+    setInterval(async () => {
+        try {
+            const r = await fetch('/api/scan-status');
+            if (r.status === 401) {
+                window.location.reload();
+                return;
+            }
+            const d = await r.json();
+            if (d.status && d.status !== 'idle') {
+                document.getElementById('stat-valid').textContent = d.valid || 0;
+                document.getElementById('stat-inbox').textContent = d.inbox || 0;
+                document.getElementById('stat-twofa').textContent = d.twofa || 0;
+                document.getElementById('stat-bad').textContent = d.bad || 0;
+                document.getElementById('stat-checked').textContent = d.checked || 0;
+                document.getElementById('stat-total').textContent = d.total || 0;
+                document.getElementById('stat-cpm').textContent = d.cpm || 0;
+
+                const pct = d.total > 0 ? Math.round((d.checked / d.total) * 100) : 0;
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('progress-text').textContent = pct + '%';
+
+                if (d.status === 'completed') {
+                    console.log('[POLL] Scan completed! upload_urls=', JSON.stringify(d.upload_urls), 'uploadModalShown=', window.uploadModalShown);
+                    document.getElementById('btn-start').disabled = false;
+                    document.getElementById('btn-pause').disabled = true;
+                    document.getElementById('btn-stop').disabled = true;
+                    document.getElementById('status-bar').className = 'status-bar status-completed';
+                    document.getElementById('status-text').textContent = 'Befejezve!';
+
+                    if (d.upload_urls && Object.keys(d.upload_urls).length > 0 && !window.uploadModalShown) {
+                        window.uploadModalShown = true;
+                        console.log('[POLL] Showing upload modal with urls:', d.upload_urls);
+                        showUploadsModal(d.upload_urls);
+                    } else {
+                        console.log('[POLL] NOT showing modal. urls empty?', !d.upload_urls || Object.keys(d.upload_urls).length === 0, 'already shown?', window.uploadModalShown);
+                    }
+                }
+            }
+        } catch (e) { console.error('[POLL] Error in polling loop:', e); }
+    }, 3000);
+</script>
+{% endblock %}

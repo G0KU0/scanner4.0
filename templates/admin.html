@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Admin - UPDH{% endblock %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="page-title">
+        <i class="fas fa-shield-alt"></i> Admin Panel
+    </h1>
+
+    <!-- CPM LIMITER -->
+    <div class="cpm-limiter-card" id="cpm-limiter-section">
+        <div class="cpm-limiter-header">
+            <h2><i class="fas fa-tachometer-alt"></i> CPM Limiter</h2>
+            <label class="toggle-switch">
+                <input type="checkbox" id="cpm-toggle" {% if cpm_settings.get('enabled') %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="cpm-limiter-body">
+            <div class="form-group">
+                <label><i class="fas fa-sliders-h"></i> Max CPM</label>
+                <input type="number" id="cpm-limit-input" class="cpm-limiter-input"
+                    value="{{ cpm_settings.get('limit', 100) }}" min="1" max="9999" step="1" {% if not
+                    cpm_settings.get('enabled') %}disabled{% endif %}>
+            </div>
+            <button class="btn btn-primary btn-sm" id="cpm-save-btn">
+                <i class="fas fa-save"></i> Mentés
+            </button>
+            <div class="cpm-limiter-status {% if cpm_settings.get('enabled') %}active{% else %}inactive{% endif %}"
+                id="cpm-status">
+                <i class="fas fa-circle" style="font-size:0.6rem"></i>
+                <span id="cpm-status-text">
+                    {% if cpm_settings.get('enabled') %}
+                    Aktív — max {{ cpm_settings.get('limit', 100) }} CPM
+                    {% else %}
+                    Inaktív
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVITE CODES -->
+    <div class="admin-section">
+        <div class="section-header">
+            <h2><i class="fas fa-ticket-alt"></i> Meghívó kódok</h2>
+            <form method="POST" action="{{ url_for('generate_invite') }}" class="inline-form">
+                <input type="number" name="count" value="1" min="1" max="50" class="input-sm">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Generálás
+                </button>
+            </form>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Kód</th>
+                        <th>Állapot</th>
+                        <th>Létrehozva</th>
+                        <th>Felhasználta</th>
+                        <th>Műveletek</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code in codes %}
+                    <tr class="{% if not code.is_active %}row-disabled{% endif %}">
+                        <td>
+                            <code class="invite-code">
+                                {{ code.code }}
+                            </code>
+                        </td>
+                        <td>
+                            {% if code.used_by %}
+                            <span class="badge badge-used">
+                                Felhasznált
+                            </span>
+                            {% elif code.is_active %}
+                            <span class="badge badge-active">
+                                Aktív
+                            </span>
+                            {% else %}
+                            <span class="badge badge-disabled">
+                                Letiltott
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ code.created_at }}</td>
+                        <td>{{ code.user_email or '-' }}</td>
+                        <td class="actions">
+                            <a href="#"
+                                class="btn btn-xs {% if code.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                                onclick="return openConfirmModal('Biztosan {% if code.is_active %}fagyasztod{% else %}feloldod{% endif %} ezt a meghívót? Az érintett felhasználó is kiléptetésre kerül.', '{{ url_for('toggle_invite', code_id=code.id) }}');">
+                                {% if code.is_active %}
+                                <i class="fas fa-eye-slash"></i>
+                                {% else %}
+                                <i class="fas fa-eye"></i>
+                                {% endif %}
+                            </a>
+                            <a href="#" class="btn btn-xs btn-danger"
+                                onclick="return openConfirmModal('Biztosan véglegesen törlöd ezt a meghívót? A felhasználó azonnal repül.', '{{ url_for('delete_invite', code_id=code.id) }}');">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="admin-section">
+        <div class="section-header">
+            <h2><i class="fas fa-users"></i> Felhasználók</h2>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Email cím</th>
+                        <th>Szerepkör</th>
+                        <th>Állapot</th>
+                        <th>Regisztráció</th>
+                        <th>Műveletek</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="{% if not user.is_active %}row-disabled{% endif %}">
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.is_admin %}
+                            <span class="badge badge-admin">
+                                Admin
+                            </span>
+                            {% else %}
+                            <span class="badge badge-user">
+                                Felhasználó
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="badge badge-active">
+                                Aktív
+                            </span>
+                            {% else %}
+                            <span class="badge badge-disabled">
+                                Letiltott
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at }}</td>
+                        <td class="actions">
+                            {% if user.id != session.get('user_id') %}
+                            <a href="#"
+                                class="btn btn-xs {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                                onclick="return openConfirmModal('Biztosan {% if user.is_active %}fagyasztod{% else %}feloldod{% endif %} a felhasználót? Azonnal kiléptetésre kerül.', '{{ url_for('toggle_user', user_id=user.id) }}');">
+                                {% if user.is_active %}
+                                <i class="fas fa-user-slash"></i>
+                                {% else %}
+                                <i class="fas fa-user-check"></i>
+                                {% endif %}
+                            </a>
+                            <a href="#" class="btn btn-xs btn-danger"
+                                onclick="return openConfirmModal('Biztosan véglegesen törlöd a felhasználót az adataival együtt?', '{{ url_for('delete_user', user_id=user.id) }}');">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-muted">Te</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Admin Modal -->
+<div id="admin-modal" class="custom-modal-overlay" style="display:none;">
+    <div class="custom-modal">
+        <h3><i class="fas fa-exclamation-triangle" style="color:var(--yellow)"></i> Megerősítés</h3>
+        <p id="admin-modal-text">Biztosan folytatod?</p>
+        <div class="custom-modal-actions">
+            <button class="btn btn-secondary" onclick="closeConfirmModal()">Mégsem</button>
+            <a id="admin-modal-btn" href="#" class="btn btn-danger">Igen, biztosan</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openConfirmModal(msg, url) {
+        document.getElementById('admin-modal-text').innerText = msg;
+        document.getElementById('admin-modal-btn').href = url;
+        document.getElementById('admin-modal').style.display = 'flex';
+        return false;
+    }
+    function closeConfirmModal() {
+        document.getElementById('admin-modal').style.display = 'none';
+    }
+
+    // ── CPM Limiter logic ──
+    (function () {
+        const toggle = document.getElementById('cpm-toggle');
+        const input = document.getElementById('cpm-limit-input');
+        const saveBtn = document.getElementById('cpm-save-btn');
+        const statusDiv = document.getElementById('cpm-status');
+        const statusText = document.getElementById('cpm-status-text');
+
+        toggle.addEventListener('change', function () {
+            input.disabled = !this.checked;
+            if (!this.checked) {
+                statusDiv.className = 'cpm-limiter-status inactive';
+                statusText.textContent = 'Inaktív';
+            }
+        });
+
+        saveBtn.addEventListener('click', async function () {
+            const enabled = toggle.checked;
+            const limit = parseInt(input.value) || 100;
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mentés...';
+
+            try {
+                const res = await fetch('/api/admin/cpm-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled, limit })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.enabled) {
+                        statusDiv.className = 'cpm-limiter-status active';
+                        statusText.textContent = 'Aktív — max ' + data.limit + ' CPM';
+                    } else {
+                        statusDiv.className = 'cpm-limiter-status inactive';
+                        statusText.textContent = 'Inaktív';
+                    }
+                    saveBtn.innerHTML = '<i class="fas fa-check"></i> Mentve!';
+                    saveBtn.classList.remove('btn-primary');
+                    saveBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        saveBtn.innerHTML = '<i class="fas fa-save"></i> Mentés';
+                        saveBtn.classList.remove('btn-success');
+                        saveBtn.classList.add('btn-primary');
+                    }, 2000);
+                } else {
+                    alert('Hiba: ' + (data.error || 'Ismeretlen hiba'));
+                }
+            } catch (err) {
+                alert('Hálózati hiba: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+    })();
+</script>
+{% endblock %}

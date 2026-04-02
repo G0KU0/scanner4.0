@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Újraaktiválás{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-key"></i>
+            </div>
+            <h1>Fiók Újraaktiválása</h1>
+            <p style="color: var(--red); margin-top: 10px;">
+                <i class="fas fa-exclamation-triangle"></i> 
+                A korábbi meghívókódodat az adminisztrátor törölte a rendszerből.
+            </p>
+            <p>Kérjük, válts be egy új meghívókódot a fiókod ismételt használatához!</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">
+                            <i class="fas fa-{{ 'check-circle' if category=='success' else 'exclamation-circle' }}"></i>
+                            <span>{{ message }}</span>
+                            <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="invite_code"><i class="fas fa-ticket-alt"></i> Új Meghívókód</label>
+                <input type="text" id="invite_code" name="invite_code" required 
+                       placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top:10px;">
+                <i class="fas fa-unlock"></i> Aktiválás és Belépés
+            </button>
+            <a href="{{ url_for('logout') }}" class="btn btn-danger btn-full" style="margin-top:10px;">
+                <i class="fas fa-sign-out-alt"></i> Inkább kijelentkezem
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}
